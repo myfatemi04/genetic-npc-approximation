@@ -20,14 +20,21 @@ class Location:
 
 rider_color = (255, 0, 0)
 car_color = (0, 0, 255)
-path_color = (0, 255, 0)
-max_grid_size = (24, 24)
-grid_square_size = 800/24
-circle_size = 10
+
+max_grid_size = (20, 20)
+grid_square_size = 600/24
+node_size = 10
+corner_size = 3
 
 background_color = (0, 0, 0)
 screen_width = 800
 screen_height = 600
+
+def sc(x, y):
+	# converts to screen coords
+	if type(x) == tuple:
+		x, y = x
+	return (x * grid_square_size + 20, y * grid_square_size + 20)
 
 class Scene:
 	def __init__(self):
@@ -40,8 +47,8 @@ class Scene:
 			pygame.draw.circle(
 				screen,
 				rider_color,
-				(rider.x * grid_square_size, rider.y * grid_square_size),
-				circle_size
+				sc(rider.x, rider.y),
+				node_size
 			)
 			
 		# draw all cars on the screen scaled to the max grid size
@@ -49,8 +56,8 @@ class Scene:
 			pygame.draw.circle(
 				screen,
 				car_color,
-				(car.x * grid_square_size, car.y * grid_square_size),
-				circle_size
+				sc(car.x, car.y),
+				node_size
 			)
 
 	def calculate_manhattan_distance(self, car_id: int, rider_id: int) -> int:
@@ -65,6 +72,8 @@ class Scene:
 		Draws the pathways from each car to their respective riders.
 		"""
 
+		path_vert = True
+
 		for rider_id in range(len(permutation)):
 			car_id = permutation[rider_id]
 
@@ -72,21 +81,53 @@ class Scene:
 			car_y = self.cars[car_id].y
 			rider_x = self.riders[rider_id].x
 			rider_y = self.riders[rider_id].y
-			# vertical line from car y to rider y
-			pygame.draw.line(
-				screen,
-				path_color,
-				(car_x * grid_square_size, car_y * grid_square_size),
-				(car_x * grid_square_size, rider_y * grid_square_size)
-			)
-			# horizontal line from car x to rider x
-			pygame.draw.line(
-				screen,
-				path_color,
-				(car_x * grid_square_size, rider_y * grid_square_size),
-				(rider_x * grid_square_size, rider_y * grid_square_size)
-			)
-		
+			vert_color= (0, 255, 255)
+			horz_color = (255, 0, 255)
+			if path_vert:
+				# vertical line from car y to rider y
+				pygame.draw.line(
+					screen,
+					vert_color,
+					sc(car_x, car_y),
+					sc(car_x, rider_y),
+				)
+				# horizontal line from car x to rider x
+				pygame.draw.line(
+					screen,
+					horz_color,
+					sc(car_x, rider_y),
+					sc(rider_x, rider_y),
+				)
+				# corner
+				pygame.draw.circle(
+					screen,
+					vert_color,
+					sc(car_x, rider_y),
+					corner_size
+				)
+			else:
+				# horizontal line from car x to rider x
+				pygame.draw.line(
+					screen,
+					horz_color,
+					sc(car_x, car_y),
+					sc(rider_x, car_y),
+				)
+				# vertical line from car y to rider y
+				pygame.draw.line(
+					screen,
+					vert_color,
+					sc(rider_x, car_y),
+					sc(rider_x, rider_y),
+				)
+				# corner
+				pygame.draw.circle(
+					screen,
+					horz_color,
+					sc(rider_x, car_y),
+					corner_size
+				)
+			path_vert = not path_vert
 
 	def evaluate_permutation(self, permutation: List[int]) -> int:
 		"""
@@ -106,14 +147,31 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("ML NP-complete AV Simulator")
 pygame.display.flip()
 
-scene = Scene()
-scene.cars.append(Location(10, 10))
-scene.cars.append(Location(10, 11))
-scene.riders.append(Location(12, 12))
-scene.riders.append(Location(14, 12))
+def get_random_scene(ncars, nriders):
+	scene = Scene()
+	for _ in range(ncars):
+		scene.cars.append(Location(random.randint(0, max_grid_size[0]), random.randint(0, max_grid_size[1])))
+	for _ in range(nriders):
+		scene.riders.append(Location(random.randint(0, max_grid_size[0]), random.randint(0, max_grid_size[1])))
+	return scene
 
-evaluation = scene.evaluate_permutation([0, 1])
-print(evaluation)
+scene = get_random_scene(10, 10)
+
+def mutate_permutation(permutation: List[int], swaps: int) -> List[int]:
+	"""
+	Returns a mutated permutation.
+	"""
+	new_permutation = permutation.copy()
+	for _ in range(swaps):
+		# swap two random indices
+		i = random.randint(0, len(permutation) - 1)
+		j = random.randint(0, len(permutation) - 1)
+		new_permutation[i], new_permutation[j] = new_permutation[j], new_permutation[i]
+	return new_permutation
+
+best_permutation = list(range(len(scene.riders)))
+
+population_size = 100
 
 running = True
 while running:
@@ -121,10 +179,20 @@ while running:
 		if event.type == pygame.constants.QUIT:
 			running = False
 
+	new_population = [*[
+		mutate_permutation(best_permutation, 10)
+		for _ in range(population_size)
+	], best_permutation]
+
+	best_permutation = min(new_population, key=lambda p: scene.evaluate_permutation(p))
+
+	evaluation = scene.evaluate_permutation(best_permutation)
+	print(evaluation)
+
 	screen.fill(background_color)
-	scene.draw_permutation([0, 1], screen)
+	scene.draw_permutation(best_permutation, screen)
 	scene.draw_cars_and_riders(screen)
 
-	time.sleep(0.01)
+	time.sleep(0.5)
 
 	pygame.display.flip()
