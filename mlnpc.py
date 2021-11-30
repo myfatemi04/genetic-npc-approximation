@@ -21,7 +21,7 @@ class Location:
 rider_color = (255, 0, 0)
 car_color = (0, 0, 255)
 
-max_grid_size = (50, 50)
+max_grid_size = (500, 500)
 grid_square_size = 600/(max_grid_size[1] + 4)
 node_size = 5
 corner_size = 3
@@ -174,7 +174,7 @@ def get_random_scene(ncars, nriders):
 		scene.riders.append(Location(random.randint(0, max_grid_size[0]), random.randint(0, max_grid_size[1])))
 	return scene
 
-nnodes = 1000
+nnodes = 200
 
 scene = get_random_scene(nnodes, nnodes)
 
@@ -188,7 +188,7 @@ def mutate_permutation(permutation: List[int], swaps: int, scene: Scene) -> List
 		possible_riders = [i for i in range(len(permutation))]
 		weights = [
 			# distance from car to rider
-			scene.calculate_euclidean_distance(permutation[rider_id], rider_id) for rider_id in range(len(permutation))
+			scene.calculate_euclidean_distance(new_permutation[rider_id], rider_id) for rider_id in range(len(permutation))
 		]
 		weights_total = sum(weights)
 		weights = [w / weights_total for w in weights]
@@ -199,7 +199,7 @@ def mutate_permutation(permutation: List[int], swaps: int, scene: Scene) -> List
 best_permutation = list(range(len(scene.riders)))
 
 population_size = 10
-nrand = 1
+nrand = 0
 
 x = 0
 
