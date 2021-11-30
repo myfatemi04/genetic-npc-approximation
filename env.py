@@ -21,7 +21,8 @@ class Location:
 rider_color = (255, 0, 0)
 car_color = (0, 0, 255)
 
-max_grid_size = (500, 500)
+__s = 1000
+max_grid_size = (__s, __s)
 grid_square_size = 600/(max_grid_size[1] + 4)
 node_size = 5
 corner_size = 3
@@ -40,15 +41,18 @@ class Car:
 	def __init__(self, loc):
 		self.loc: Location = loc
 		self.dest = None
+		self.reached_dest_in = None
 
 class Scene:
 	def __init__(self):
 		self.riders: List[Location] = []
 		self.cars: List[Car] = []
 
-	def step(self):
+	def step(self, timer):
 		for car in self.cars:
 			if car.dest is not None:
+				if car.reached_dest_in is not None:
+					continue
 				# if the car is assigned a destination, move towards it
 				dest = self.riders[car.dest]
 				if car.loc.x < dest.x:
@@ -59,12 +63,45 @@ class Scene:
 					car.loc.y += 1
 				elif car.loc.y > dest.y:
 					car.loc.y -= 1
+				if car.loc.x == dest.x and car.loc.y == dest.y:
+					car.reached_dest_in = timer
 			else:
-				# if the car is not assigned a destination, randomly assign one
-				# get a list of all destinations without a car
-				taken_destinations = set(car.dest for car in self.cars)
-				available_destinations = [i for i in range(len(self.riders)) if i not in taken_destinations]
-				car.dest = random.choice(available_destinations)
+				method = 'random'
+
+				if method == 'random':
+					# if the car is not assigned a destination, randomly assign one
+					# get a list of all destinations without a car
+					taken_destinations = set(car.dest for car in self.cars)
+					available_destinations = [i for i in range(len(self.riders)) if i not in taken_destinations]
+					car.dest = random.choice(available_destinations)
+				
+				elif method == 'greedy':
+					# choose the closest destination that is not assigned to a car
+					# get a list of all destinations without a car
+					taken_destinations = set(car.dest for car in self.cars)
+					available_destinations = [i for i in range(len(self.riders)) if i not in taken_destinations]
+					# choose the closest destination that is not assigned to a car
+					closest_destination = None
+					closest_distance = None
+					for dest_id in available_destinations:
+						dest = self.riders[dest_id]
+						distance = abs(car.loc.x - dest.x) + abs(car.loc.y - dest.y)
+						if closest_destination is None or distance < closest_distance:
+							closest_destination = dest_id
+							closest_distance = distance
+					car.dest = closest_destination
+
+		reached_dest_in = [car.reached_dest_in for car in self.cars]
+		if None in reached_dest_in:
+			return
+		
+		# all cars reached their destination
+		if max(reached_dest_in)	== timer:
+			# all cars reached their destination
+			print("all cars reached their destination")
+			print("average delay:", sum(reached_dest_in)/len(reached_dest_in))
+			print("max delay:", max(reached_dest_in))
+			print()
 
 	def draw_cars_and_riders(self, screen):
 		# draw all riders on the screen scaled to the max grid size
@@ -117,7 +154,7 @@ pygame.display.flip()
 
 scene = get_random_scene(10, 10)
 
-x = 0
+timer = 0
 
 running = True
 while running:
@@ -125,11 +162,11 @@ while running:
 		if event.type == pygame.constants.QUIT:
 			running = False
 
-	x += 1
+	timer += 1
 
 	screen.fill(background_color)
 	scene.draw_cars_and_riders(screen)
-	scene.step()
+	scene.step(timer)
 	time.sleep(0.0)
 
 	pygame.display.flip()
