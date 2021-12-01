@@ -3,7 +3,20 @@ This is just Q-learning.
 
 TODO: Make it stop at a good place
 		Maybe use best genetic mutation of current permutation as stop signal?
-		
+
+TODO: Add distances/coordinates into input state
+TODO: Make things identify by coordinates, not ID
+		RN, the only thing in the input state is ID
+		It takes a lot of swaps before the AI actually realizes where everything is
+		save on swaps and also make it more robust by adding coords
+
+TODO: add a NN instead of a Q-Table to make a DQN in PyTorch.
+
+TODO: add Multi Agent Reinforcement learning, where each car has its own agent
+
+TODO: add GNN instead of normal NN or Q-Table
+
+TODO: sell to Uber
 """
 
 import random
@@ -244,10 +257,7 @@ n_actions = c+1
 
 Q = defaultdict(lambda: np.zeros(n_actions))
 
-
-
 policy = createEpsilonGreedyPolicy(Q, epsilon, n_actions)
-
 
 rewards = []
 eps = []
@@ -298,8 +308,7 @@ for ep in range(num_episodes):
 
 		lgains.append(reward)
 
-		if scene.evaluate_permutation(new_permutation) <= 1600 or t > n_actions**2:
-			break
+
 
 		if t % 100 == 0:
 			print(scene.evaluate_permutation(new_permutation), base)
@@ -311,6 +320,10 @@ for ep in range(num_episodes):
 
 
 		pygame.display.flip()
+
+		if scene.evaluate_permutation(new_permutation) <= 1600 or t > n_actions**2:
+			time.sleep(5)
+			break
 
 	print("Episode Number: ", ep+1)
 	print("Reward: ", reward)
