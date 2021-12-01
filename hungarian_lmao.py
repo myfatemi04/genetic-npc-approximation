@@ -259,7 +259,7 @@ from scipy.spatial.distance import cdist
 car_pts = [ [scene.cars[i].x, scene.cars[i].y] for i in range(len(scene.cars))]
 rider_pts = [ [scene.riders[i].x, scene.riders[i].y] for i in range(len(scene.riders))]
 
-C = cdist(car_pts, rider_pts)
+C = cdist(rider_pts, car_pts)
 _, assignment = linear_sum_assignment(C)
 
 print(assignment)
